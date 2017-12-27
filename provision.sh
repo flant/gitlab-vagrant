@@ -42,6 +42,8 @@ apt-get install -y --no-install-recommends gitlab-ce
 
 # create a self-signed certificate and add it to the global trusted list.
 pushd /etc/ssl/private
+
+# certificate for main domain
 openssl genrsa \
     -out $domain-keypair.pem \
     2048 \
@@ -68,6 +70,35 @@ openssl x509 -req -sha256 \
     -in  $domain-csr.pem \
     -out $domain-crt.pem
 cp $domain-crt.pem /usr/local/share/ca-certificates/$domain.crt
+
+# certificate for registry.$domain
+openssl genrsa \
+    -out registry.$domain-keypair.pem \
+    2048 \
+    2>/dev/null
+chmod 400 registry.$domain-keypair.pem
+openssl req -new \
+    -sha256 \
+    -subj "/CN=registry.$domain" \
+    -reqexts a \
+    -config <(cat /etc/ssl/openssl.cnf
+        echo "[a]
+        subjectAltName=DNS:registry.$domain
+        ") \
+    -key registry.$domain-keypair.pem \
+    -out registry.$domain-csr.pem
+openssl x509 -req -sha256 \
+    -signkey registry.$domain-keypair.pem \
+    -extensions a \
+    -extfile <(echo "[a]
+        subjectAltName=DNS:registry.$domain
+        extendedKeyUsage=serverAuth
+        ") \
+    -days 365 \
+    -in  registry.$domain-csr.pem \
+    -out registry.$domain-crt.pem
+cp registry.$domain-crt.pem /usr/local/share/ca-certificates/registry.$domain.crt
+
 update-ca-certificates --verbose
 popd
 
@@ -78,6 +109,9 @@ ln -s /etc/ssl/private/$domain-crt.pem /etc/gitlab/ssl/$domain.crt
 sed -i -E "s,^(external_url\s+).+,\1'https://$domain'," /etc/gitlab/gitlab.rb
 sed -i -E "s,^(\s*#\s*)?(nginx\['redirect_http_to_https'\]\s+).+,\2= true," /etc/gitlab/gitlab.rb
 
+ln -s /etc/ssl/private/registry.$domain-keypair.pem /etc/gitlab/ssl/registry.$domain.key
+ln -s /etc/ssl/private/registry.$domain-crt.pem /etc/gitlab/ssl/registry.$domain.crt
+
 # show the changes we've made to gitlab.rb.
 diff -u /opt/gitlab/etc/gitlab.rb.template /etc/gitlab/gitlab.rb || test $? = 1
 
@@ -85,6 +119,7 @@ diff -u /opt/gitlab/etc/gitlab.rb.template /etc/gitlab/gitlab.rb || test $? = 1
 # see https://gitlab.com/gitlab-org/omnibus-gitlab/issues/2857
 [ -n "$(which patch)" ] || apt-get install -y patch
 patch --batch --quiet /etc/gitlab/gitlab.rb /vagrant/gitlab.rb-nginx-status.patch
+patch --batch --quiet /etc/gitlab/gitlab.rb /vagrant/gitlab.rb-enable-registry.patch
 
 # configure gitlab to use the dc.example.com Active Directory LDAP.
 # NB this assumes you are running https://github.com/rgl/windows-domain-controller-vagrant.
@@ -115,7 +150,18 @@ a.description = 'Sign in on the right or [explore the public projects](/explore/
 a.save!
 EOF
 
-# include the gitlab api functions. 
+# create access token for API usage
+gitlab-rails console production <<'EOF'
+u = User.first
+at = PersonalAccessToken.create
+at.user = u
+at.name = 'vagrant'
+at.scopes = [:api, :read_user, :sudo, :read_registry]
+at.expires_at = Date.new(2100, 12, 31)
+at.save!
+EOF
+
+# include the gitlab api functions.
 source /vagrant/_include_gitlab_api.sh
 
 # disable user signup.

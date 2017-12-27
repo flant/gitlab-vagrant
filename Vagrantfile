@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 
 Vagrant.configure(2) do |config|
-  config.vm.box = "ubuntu-16.04-amd64"
+  config.vm.box = "ubuntu/xenial64" #ubuntu-16.04-amd64"
 
   config.vm.hostname = "gitlab.example.com"
 
@@ -11,13 +11,9 @@ Vagrant.configure(2) do |config|
   config.vm.provider "virtualbox" do |vb|
     vb.linked_clone = true
     #vb.gui = true
-    vb.memory = "2048"
-  end
-
-  config.trigger.before :up do
-    ldap_ca_cert_path = '../windows-domain-controller-vagrant/tmp/ExampleEnterpriseRootCA.der'
-    run "sh -c 'mkdir -p tmp && cp #{ldap_ca_cert_path} tmp'" if File.file? ldap_ca_cert_path
+    vb.memory = "4096"
   end
 
   config.vm.provision "shell", path: "provision.sh"
+  config.vm.provision "dapp", type: "shell", path: "docker-and-dapp.sh"
 end

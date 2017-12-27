@@ -1,0 +1,39 @@
+--- /etc/gitlab/gitlab.rb.orig	2017-12-13 13:17:45.431137188 +0000
++++ /etc/gitlab/gitlab.rb	2017-12-13 17:16:50.399950000 +0000
+@@ -441,19 +441,19 @@
+ ##! Docs: https://docs.gitlab.com/ce/administration/container_registry.html
+ ################################################################################
+ 
+-# registry_external_url 'https://registry.gitlab.example.com'
++registry_external_url 'https://registry.gitlab.example.com'
+ 
+ ### Settings used by GitLab application
+-# gitlab_rails['registry_enabled'] = true
+-# gitlab_rails['registry_host'] = "registry.gitlab.example.com"
+-# gitlab_rails['registry_port'] = "5005"
+-# gitlab_rails['registry_path'] = "/var/opt/gitlab/gitlab-rails/shared/registry"
++gitlab_rails['registry_enabled'] = true
++gitlab_rails['registry_host'] = "registry.gitlab.example.com"
++gitlab_rails['registry_port'] = "5000"
++gitlab_rails['registry_path'] = "/var/opt/gitlab/gitlab-rails/shared/registry"
+ 
+ ###! **Do not change the following 3 settings unless you know what you are
+ ###!   doing**
+-# gitlab_rails['registry_api_url'] = "http://localhost:5000"
+-# gitlab_rails['registry_key_path'] = "/var/opt/gitlab/gitlab-rails/certificate.key"
+-# gitlab_rails['registry_issuer'] = "omnibus-gitlab-issuer"
++gitlab_rails['registry_api_url'] = "http://localhost:5000"
++gitlab_rails['registry_key_path'] = "/var/opt/gitlab/gitlab-rails/certificate.key"
++gitlab_rails['registry_issuer'] = "omnibus-gitlab-issuer"
+ 
+ ### Settings used by Registry application
+ # registry['enable'] = true
+@@ -462,7 +462,7 @@
+ # registry['uid'] = nil
+ # registry['gid'] = nil
+ # registry['dir'] = "/var/opt/gitlab/registry"
+-# registry['registry_http_addr'] = "localhost:5000"
++registry['registry_http_addr'] = "0.0.0.0:5000"
+ # registry['debug_addr'] = "localhost:5001"
+ # registry['log_directory'] = "/var/log/gitlab/registry"
+ # registry['log_level'] = "info"
